@@ -5,7 +5,7 @@
 
 # Fill cpp file
 
-# Compile and copy files to user's Extensions dir]
+# Compile and copy files to user's Extensions dir
 
 import sys
 import os
