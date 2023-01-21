@@ -113,6 +113,7 @@ void KronosTemplate_next_a(KronosTemplate* unit, int inNumSamples) {
     // Mul outs next
 
     // Buffers release
+    
 }
 
 PluginLoad(KronosTemplateUGens) 
