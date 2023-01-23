@@ -90,7 +90,6 @@ def writeFiles(name, ins, outs, params, buffers):
     scArgs = "arg "
     scMultiNew = "^this.multiNew('audio',"
     scMultiOut = "init { arg ... theInputs;\n        inputs = theInputs;\n        ^this.initOutputs(" + str(outs) + ", rate);\n    }"
-    print(scMultiOut)
     
     # Block tick
     if len(params) + len(buffers) > 0:
@@ -146,14 +145,16 @@ def writeFiles(name, ins, outs, params, buffers):
         cppFile = cppFile.replace("// buffers release", "// buffers release\n    BUFFER_RELEASE(" + bufName + ")")
         bufferIdx += 1
 
-    print(scArgs)
     if scArgs != "arg ":
         scArgs = scArgs[:-1] + ";"
         scMultiNew = scMultiNew[:-1] + ");"
         scFile = scFile.replace("// args", scArgs)
         scFile = scFile.replace("// multiNew", scMultiNew)
-       
-    #print(cppFile)
+
+    print("CPP FILE \n")
+    print(cppFile)
+    
+    print("SC FILE \n")
     print(scFile)
     
     with open("KronosTemplate.cpp", "w") as file:
