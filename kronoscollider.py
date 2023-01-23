@@ -17,7 +17,6 @@ def parseHeader(kronosHeaderFile: str):
     ins = 1
     outs = 1
     tickAudio = False
-    tickBlock = False
     bufsDict = {}
     bufsParams = []
     paramsNames = {}
@@ -31,10 +30,6 @@ def parseHeader(kronosHeaderFile: str):
         # Audio tick exists
         if "KronosTickAudio" in item:
             tickAudio = True
-
-        # TickBlock exists
-        if "KronosTickBlock" in item:
-            tickBlock = True
 
         # ins
         if insToken in item:
@@ -90,7 +85,7 @@ def parseHeader(kronosHeaderFile: str):
     
     #print(kronosHeaderFile)
 
-    return (tickAudio, tickBlock, ins, outs, paramsNames, bufsDict)
+    return (tickAudio, ins, outs, paramsNames, bufsDict)
 
 def main() -> int:
     # Check file exists and extract name
@@ -135,7 +130,7 @@ def main() -> int:
     with open(headerFile, "r") as text_file:
         kronosHeaderFile = text_file.read()
 
-    (tickAudio, tickBlock, ins, outs, params, buffers) = parseHeader(kronosHeaderFile)
+    (tickAudio, ins, outs, params, buffers) = parseHeader(kronosHeaderFile)
 
     # If tickAudio doesn't exist, quit: it's not an audio obj
     if not tickAudio:
@@ -146,6 +141,9 @@ def main() -> int:
     print("outs:", outs)
     print("params:", params)
     print("buffers:", buffers)
+
+    writeCpp(ins, outs, params, buffers)
+    writeSC(ins, outs, params, buffers)
 
     return 0
 
