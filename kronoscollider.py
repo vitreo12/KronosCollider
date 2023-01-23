@@ -24,6 +24,8 @@ def parseHeader(kronosHeaderFile: str):
     paramsNames = []
     paramsSlotIndices = []
 
+    bufsDict = {}
+
     # First pass: ins / outs and buffers (they don't interact with each other)
     insToken = "typedef float KronosaudioInputType["
     outsToken = "typedef float KronosOutputType["
@@ -52,9 +54,11 @@ def parseHeader(kronosHeaderFile: str):
         # Buffers    
         if bufInputTypeToken in item and insToken not in item:
             bufName = item.replace("typedef float Kronos", "")
+            bufDict = {}
             inputTypeIdx = bufName.rfind(bufInputTypeToken)
             bufName = bufName[:inputTypeIdx].lower()
             bufsNames.append(bufName)
+            
             bufsParams.append(bufName + "samplerate")
             bufsParams.append(bufName + "size")
             bufsParams.append(bufName + "frames")
