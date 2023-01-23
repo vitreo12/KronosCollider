@@ -59,7 +59,7 @@ def parseHeader(kronosHeaderFile: str):
             if paramName not in bufsParams: # Exculde buffer params
                 paramsNames.append(paramName)
     
-    return (ins, outs, len(paramsNames), paramsNames, len(bufsNames), bufsNames)
+    return (ins, outs, paramsNames, bufsNames)
 
 def main() -> int:
     # Check file exists and extract name
@@ -104,7 +104,12 @@ def main() -> int:
     with open(headerFile, "r") as text_file:
         kronosHeaderFile = text_file.read()
 
-    (ins, outs, numParams, params, numBuffers, buffers) = parseHeader(kronosHeaderFile)
+    (ins, outs, params, buffers) = parseHeader(kronosHeaderFile)
+
+    print("ins:", ins)
+    print("outs:", outs)
+    print("params:", params)
+    print("buffers:", buffers)
 
     return 0
 
