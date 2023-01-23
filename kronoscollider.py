@@ -19,7 +19,7 @@ def parseHeader(kronosHeaderFile: str):
     tickAudio = False
     bufsDict = {}
     bufsParams = []
-    paramsNames = {}
+    paramsDict = {}
 
     # First pass: ins / outs and buffers (they don't interact with each other)
     insToken = "typedef float KronosaudioInputType["
@@ -72,7 +72,7 @@ def parseHeader(kronosHeaderFile: str):
                 slotIndex = slotIndex.replace("*KronosGetValue(instance, ", "")
                 slotIndexIdx = slotIndex.rfind(") = (void*)")
                 slotIndex = int(slotIndex[:slotIndexIdx])
-                paramsNames[paramName] = slotIndex
+                paramsDict[paramName] = slotIndex
             else: # Add buffer params to existing buf dict
                 for param in ["samplerate", "size", "frames", "numchans"]:
                     if param in paramName:
@@ -85,7 +85,10 @@ def parseHeader(kronosHeaderFile: str):
     
     #print(kronosHeaderFile)
 
-    return (tickAudio, ins, outs, paramsNames, bufsDict)
+    return (tickAudio, ins, outs, paramsDict, bufsDict)
+
+def writeCpp(tickAudio, ins, outs, params, buffers):
+    return
 
 def main() -> int:
     # Check file exists and extract name
