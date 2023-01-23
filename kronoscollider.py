@@ -59,6 +59,7 @@ def parseHeader(kronosHeaderFile: str):
             if paramName not in bufsParams: # Exculde buffer params
                 paramsNames.append(paramName)
     
+    print(kronosHeaderFile)
     return (ins, outs, paramsNames, bufsNames)
 
 def main() -> int:
