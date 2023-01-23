@@ -20,8 +20,6 @@ def parseHeader(kronosHeaderFile: str):
     bufsParams = []
     paramsNames = []
 
-    #print(kronosHeaderFile)
-
     # First pass: ins / outs and buffers (they don't interact with each other)
     insToken = "typedef float KronosaudioInputType["
     outsToken = "typedef float KronosOutputType["
@@ -64,7 +62,7 @@ def parseHeader(kronosHeaderFile: str):
     return (ins, outs, len(paramsNames), paramsNames, len(bufsNames), bufsNames)
 
 def main() -> int:
-    # Kronos file stuff
+    # Check file exists and extract name
     kronosFile = "~/Sources/KronosBuffer/KronosBuffer.k"
     kronosFile = os.path.abspath(os.path.expanduser(kronosFile))
     if(not os.path.exists(kronosFile)):
@@ -106,7 +104,7 @@ def main() -> int:
     with open(headerFile, "r") as text_file:
         kronosHeaderFile = text_file.read()
 
-    print(parseHeader(kronosHeaderFile))
+    (ins, outs, numParams, params, numBuffers, buffers) = parseHeader(kronosHeaderFile)
 
     return 0
 
