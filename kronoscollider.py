@@ -90,6 +90,9 @@ def parseHeader(kronosHeaderFile: str):
 def writeCpp(tickAudio, ins, outs, params, buffers):
     return
 
+def writeSC(ins, outs, params, buffers):
+    return
+
 def main() -> int:
     # Check file exists and extract name
     kronosFile = "~/Sources/KronosBuffer/KronosBuffer.k"
@@ -116,11 +119,13 @@ def main() -> int:
 
     # Copy files and cd into it
     cwd = os.getcwd()
-    cppFile = cwd + "/cpp/KronosTemplate.cpp"
-    cmakeFile = cwd + "/cpp/CMakeLists.txt"
+    cppFile = cwd + "/KronosTemplate/KronosTemplate.cpp"
+    cmakeFile = cwd + "/KronosTemplate/CMakeLists.txt"
+    scFile = cwd + "/KronosTemplate/KronosTemplate.sc"
     shutil.copy(kronosFile, outDir)
     shutil.copy(cppFile, outDir)
     shutil.copy(cmakeFile, outDir)
+    shutil.copy(scFile, outDir)
     os.chdir(outDir)
 
     # Compile kronos code (prefix with Kronos)
@@ -145,7 +150,7 @@ def main() -> int:
     print("params:", params)
     print("buffers:", buffers)
 
-    writeCpp(ins, outs, params, buffers)
+    writeCpp(tickAudio, ins, outs, params, buffers)
     writeSC(ins, outs, params, buffers)
 
     return 0
