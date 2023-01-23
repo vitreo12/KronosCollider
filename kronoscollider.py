@@ -1,12 +1,6 @@
 # linux / macos: compile to ~/.cache
 # windows: compile to C:\Windows\Temp
 
-# Parse header
-
-# Fill cpp file
-
-# Compile and copy files to user's Extensions dir
-
 import sys
 import os
 import platform
@@ -54,10 +48,10 @@ def parseHeader(kronosHeaderFile: str):
             slotIndexIdx = slotIndex.rfind(") = (void*)")
             slotIndex = int(slotIndex[:slotIndexIdx])
             bufsDict[bufName]["slotIndex"] = slotIndex
-            bufsParams.append(bufName + "samplerate")
             bufsParams.append(bufName + "size")
             bufsParams.append(bufName + "frames")
             bufsParams.append(bufName + "numchans")
+            bufsParams.append(bufName + "samplerate")
 
     # Params (they need buffers to be done)
     kronosSetToken = "static void KronosSet"
@@ -74,7 +68,7 @@ def parseHeader(kronosHeaderFile: str):
                 slotIndex = int(slotIndex[:slotIndexIdx])
                 paramsDict[paramName] = slotIndex
             else: # Add buffer params to existing buf dict
-                for param in ["samplerate", "size", "frames", "numchans"]:
+                for param in ["size", "frames", "numchans", "samplerate"]:
                     if param in paramName:
                         bufname = paramName.replace(param, "")
                         slotIndex = kronosHeaderFileSplit[i + 1]
@@ -85,21 +79,88 @@ def parseHeader(kronosHeaderFile: str):
     
     return (tickAudio, ins, outs, paramsDict, bufsDict)
 
-def writeCpp(ins, outs, params, buffers):
-    # ins / outs
+def writeFiles(name, ins, outs, params, buffers):
+    with open("KronosTemplate.cpp", "r") as text:
+        cppFile = text.read()
+    with open("KronosTemplate.sc", "r") as text:
+        scFile = text.read()
 
-    # params
-
-    # Buffers
+    cppFile = cppFile.replace("KronosTemplate", name)
+    scFile = scFile.replace("KronosTemplate", name)
+    scArgs = "arg "
+    scMultiNew = "^this.multiNew('audio',"
+    scMultiOut = "init { arg ... theInputs;\n        inputs = theInputs;\n        ^this.initOutputs(" + str(outs) + ", rate);\n    }"
+    print(scMultiOut)
     
-    return
+    # Block tick
+    if len(params) + len(buffers) > 0:
+        cppFile = cppFile.replace("// tick block", "KronosTickBlock(unit->m_obj, nullptr, 1);")
 
-def writeSC(ins, outs, params, buffers):
     # ins / outs
+    if ins > 1:
+        cppFile = cppFile.replace("// ins unit", "INS_UNIT")
+        cppFile = cppFile.replace("// ins ctor", "INS_CTOR")
+        cppFile = cppFile.replace("// ins dtor", "INS_DTOR")
+        cppFile = cppFile.replace("// ins next", "INS_INTERLEAVE\n    KronosSetAudio(unit->m_obj, unit->m_ins);")
+    else:
+        cppFile = cppFile.replace("// ins next", "KronosSetAudio(unit->m_obj, IN(0));")
+
+    for i in range(ins):
+        inName = "in" + str(i + 1)
+        scArgs = scArgs + inName + ","
+        scMultiNew = scMultiNew + inName + ","
+        scFile = scFile.replace("// rates", "// rates\n        if(" + inName + ".rate != audio, {\"" + name + ": expected '" + inName + "' to be at audio rate. Wrapping it in a K2A UGen.\".warn; " + inName + " = K2A.ar(" + inName + ")});")   
+        
+    if outs > 1:
+        scFile = scFile.replace("// multiOut", scMultiOut)
+        cppFile = cppFile.replace("// outs unit", "OUTS_UNIT")
+        cppFile = cppFile.replace("// outs ctor", "OUTS_CTOR")
+        cppFile = cppFile.replace("// outs dtor", "OUTS_DTOR")
+        cppFile = cppFile.replace("// outs next", "KronosTickAudio(unit->m_obj, unit->m_outs, inNumSamples);\n    OUTS_DEINTERLEAVE")
+    else:
+        cppFile = cppFile.replace("// outs next", "KronosTickAudio(unit->m_obj, OUT(0), inNumSamples);")
 
     # params
+    paramIdx = ins # start counting after audio inputs
+    for paramName, slotIndex in params.items():
+        cppFile = cppFile.replace("// params next", "// params next\n    PARAM_SET(" + str(slotIndex) + "," + str(paramIdx) + ")")
+        scFile = scFile.replace("// rates", "// rates\n        if(" + paramName + ".rate == audio, {\"" + name + ": expected '" + paramName + "' to be at control rate. Wrapping it in a A2K UGen.\".warn; " + paramName + " = A2K.kr(" + paramName + ")});")
+        scArgs = scArgs + paramName + ","
+        scMultiNew = scMultiNew + paramName + ","
+        paramIdx += 1
 
     # Buffers
+    bufferIdx = paramIdx # start counting after params
+    for bufName, params in buffers.items():
+        scArgs = scArgs + bufName + ","
+        scMultiNew = scMultiNew + bufName + ","
+        scFile = scFile.replace("// rates", "// rates\n        if(" + bufName + ".class != Buffer, {\"" + name + ": expected '" + bufName + "' to be at control rate. Wrapping it in a A2K UGen.\".warn; " + bufName + " = A2K.kr(" + bufName + ")});")
+        slotIndex = str(params["slotIndex"])
+        slotIndexSize = str(params["slotIndex_size"])
+        slotIndexFrames = str(params["slotIndex_frames"])
+        slotIndexNumChans = str(params["slotIndex_numchans"])
+        slotIndexSR = str(params["slotIndex_samplerate"])
+        cppFile = cppFile.replace("// buffers unit", "// buffers unit\n    BUFFER_UNIT(" + bufName + ")")
+        cppFile = cppFile.replace("// buffers ctor", "// buffers ctor\n    BUFFER_CTOR(" + bufName + ")")
+        cppFile = cppFile.replace("// buffers next", "// buffers next\n    BUFFER_NEXT(" + bufName + "," + str(bufferIdx) + "," + slotIndex + "," + slotIndexSize + "," + slotIndexFrames + "," + slotIndexNumChans + "," + slotIndexSR + ")")
+        cppFile = cppFile.replace("// buffers release", "// buffers release\n    BUFFER_RELEASE(" + bufName + ")")
+        bufferIdx += 1
+
+    print(scArgs)
+    if scArgs != "arg ":
+        scArgs = scArgs[:-1] + ";"
+        scMultiNew = scMultiNew[:-1] + ");"
+        scFile = scFile.replace("// args", scArgs)
+        scFile = scFile.replace("// multiNew", scMultiNew)
+       
+    #print(cppFile)
+    print(scFile)
+    
+    with open("KronosTemplate.cpp", "w") as file:
+        file.write(cppFile)
+    with open("KronosTemplate.sc", "w") as file:
+        file.write(scFile)
+
     return
 
 def main() -> int:
@@ -154,13 +215,18 @@ def main() -> int:
         print("ERROR: Kronos code does not contain an audio tick output.")
         return 1
 
-    print("ins:", ins)
-    print("outs:", outs)
-    print("params:", params)
-    print("buffers:", buffers)
+    #print("ins:", ins)
+    #print("outs:", outs)
+    #print("params:", params)
+    #print("buffers:", buffers)
 
-    writeCpp(ins, outs, params, buffers)
-    writeSC(ins, outs, params, buffers)
+    writeFiles(name, ins, outs, params, buffers)
+
+    # Rename files
+
+    # Build
+
+    # Copy folder to extensions dir
 
     return 0
 
