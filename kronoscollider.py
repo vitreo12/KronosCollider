@@ -162,6 +162,9 @@ def writeFiles(name, ins, outs, params, buffers):
     with open("KronosTemplate.sc", "w") as file:
         file.write(scFile)
 
+    os.rename("KronosTemplate.cpp", name + ".cpp")
+    os.rename("KronosTemplate.sc", name + ".sc")
+
     return
 
 def main() -> int:
