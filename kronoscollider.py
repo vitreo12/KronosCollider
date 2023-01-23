@@ -226,8 +226,6 @@ def main() -> int:
 
     writeFiles(name, ins, outs, params, buffers)
 
-    # Rename files
-
     # Build
 
     # Copy folder to extensions dir
