@@ -18,19 +18,16 @@ def parseHeader(kronosHeaderFile: str):
     outs = 1
     tickAudio = False
     tickBlock = False
-    bufsNames = []
-    bufsSlotIndices = []
-    bufsParams = []
-    paramsNames = []
-    paramsSlotIndices = []
-
     bufsDict = {}
+    bufsParams = []
+    paramsNames = {}
 
     # First pass: ins / outs and buffers (they don't interact with each other)
     insToken = "typedef float KronosaudioInputType["
     outsToken = "typedef float KronosOutputType["
     bufInputTypeToken = "InputType["
-    for item in kronosHeaderFile.split("\n"):
+    kronosHeaderFileSplit = kronosHeaderFile.split("\n")
+    for i, item in enumerate(kronosHeaderFileSplit):
         # Audio tick exists
         if "KronosTickAudio" in item:
             tickAudio = True
@@ -54,11 +51,14 @@ def parseHeader(kronosHeaderFile: str):
         # Buffers    
         if bufInputTypeToken in item and insToken not in item:
             bufName = item.replace("typedef float Kronos", "")
-            bufDict = {}
             inputTypeIdx = bufName.rfind(bufInputTypeToken)
             bufName = bufName[:inputTypeIdx].lower()
-            bufsNames.append(bufName)
-            
+            bufsDict[bufName] = {}
+            slotIndex = kronosHeaderFileSplit[i + 2] #*KronosGetValue part of the function
+            slotIndex = slotIndex.replace("*KronosGetValue(instance, ", "")
+            slotIndexIdx = slotIndex.rfind(") = (void*)")
+            slotIndex = int(slotIndex[:slotIndexIdx])
+            bufsDict[bufName]["slotIndex"] = slotIndex
             bufsParams.append(bufName + "samplerate")
             bufsParams.append(bufName + "size")
             bufsParams.append(bufName + "frames")
@@ -67,17 +67,30 @@ def parseHeader(kronosHeaderFile: str):
     # Params (they need buffers to be done)
     kronosSetToken = "static void KronosSet"
     kronosInstancePtrToken = "(KronosInstancePtr instance, const float*"
-    for item in kronosHeaderFile.split("\n"):
-        if kronosSetToken and kronosInstancePtrToken  in item:
+    for i, item in enumerate(kronosHeaderFileSplit):
+        if kronosSetToken and kronosInstancePtrToken in item:
             paramName = item.replace(kronosSetToken, "")
             kronosInstancePtrIdx = paramName.rfind(kronosInstancePtrToken)
             paramName = paramName[:kronosInstancePtrIdx].lower()
-            if paramName not in bufsParams: # Exculde buffer params
-                paramsNames.append(paramName)
+            if paramName not in bufsParams: # Exclude buffer params
+                slotIndex = kronosHeaderFileSplit[i + 1]
+                slotIndex = slotIndex.replace("*KronosGetValue(instance, ", "")
+                slotIndexIdx = slotIndex.rfind(") = (void*)")
+                slotIndex = int(slotIndex[:slotIndexIdx])
+                paramsNames[paramName] = slotIndex
+            else: # Add buffer params to existing buf dict
+                for param in ["samplerate", "size", "frames", "numchans"]:
+                    if param in paramName:
+                        bufname = paramName.replace(param, "")
+                        slotIndex = kronosHeaderFileSplit[i + 1]
+                        slotIndex = slotIndex.replace("*KronosGetValue(instance, ", "")
+                        slotIndexIdx = slotIndex.rfind(") = (void*)")
+                        slotIndex = int(slotIndex[:slotIndexIdx])
+                        bufsDict[bufname]["slotIndex_" + param] = slotIndex
     
     #print(kronosHeaderFile)
 
-    return (tickAudio, tickBlock, ins, outs, paramsNames, bufsNames)
+    return (tickAudio, tickBlock, ins, outs, paramsNames, bufsDict)
 
 def main() -> int:
     # Check file exists and extract name
@@ -124,7 +137,6 @@ def main() -> int:
 
     (tickAudio, tickBlock, ins, outs, params, buffers) = parseHeader(kronosHeaderFile)
 
-    print(tickAudio)
     # If tickAudio doesn't exist, quit: it's not an audio obj
     if not tickAudio:
         print("ERROR: Kronos code does not contain an audio tick output.")
