@@ -16,15 +16,27 @@ import re
 def parseHeader(kronosHeaderFile: str):
     ins = 1
     outs = 1
+    tickAudio = False
+    tickBlock = False
     bufsNames = []
+    bufsSlotIndices = []
     bufsParams = []
     paramsNames = []
+    paramsSlotIndices = []
 
     # First pass: ins / outs and buffers (they don't interact with each other)
     insToken = "typedef float KronosaudioInputType["
     outsToken = "typedef float KronosOutputType["
     bufInputTypeToken = "InputType["
     for item in kronosHeaderFile.split("\n"):
+        # Audio tick exists
+        if "KronosAudioTick" in item:
+            tickAudio = True
+
+        # TickBlock exists
+        if "KronosTickBlock" in item:
+            tickBlock = True
+
         # ins
         if insToken in item:
             insStr = item.replace(insToken, "")
@@ -59,8 +71,10 @@ def parseHeader(kronosHeaderFile: str):
             if paramName not in bufsParams: # Exculde buffer params
                 paramsNames.append(paramName)
     
-    print(kronosHeaderFile)
-    return (ins, outs, paramsNames, bufsNames)
+
+    #print(kronosHeaderFile)
+
+    return (tickAudio, tickBlock, ins, outs, paramsNames, bufsNames)
 
 def main() -> int:
     # Check file exists and extract name
@@ -105,7 +119,13 @@ def main() -> int:
     with open(headerFile, "r") as text_file:
         kronosHeaderFile = text_file.read()
 
-    (ins, outs, params, buffers) = parseHeader(kronosHeaderFile)
+    (tickAudio, tickBlock, ins, outs, params, buffers) = parseHeader(kronosHeaderFile)
+
+    print(tickAudio)
+    # If tickAudio doesn't exist, quit: it's not an audio obj
+    if not tickAudio:
+        print("ERROR: Kronos code does not contain an audio tick output.")
+        return 1
 
     print("ins:", ins)
     print("outs:", outs)
