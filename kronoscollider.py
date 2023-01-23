@@ -83,14 +83,23 @@ def parseHeader(kronosHeaderFile: str):
                         slotIndex = int(slotIndex[:slotIndexIdx])
                         bufsDict[bufname]["slotIndex_" + param] = slotIndex
     
-    #print(kronosHeaderFile)
-
     return (tickAudio, ins, outs, paramsDict, bufsDict)
 
-def writeCpp(tickAudio, ins, outs, params, buffers):
+def writeCpp(ins, outs, params, buffers):
+    # ins / outs
+
+    # params
+
+    # Buffers
+    
     return
 
 def writeSC(ins, outs, params, buffers):
+    # ins / outs
+
+    # params
+
+    # Buffers
     return
 
 def main() -> int:
@@ -150,7 +159,7 @@ def main() -> int:
     print("params:", params)
     print("buffers:", buffers)
 
-    writeCpp(tickAudio, ins, outs, params, buffers)
+    writeCpp(ins, outs, params, buffers)
     writeSC(ins, outs, params, buffers)
 
     return 0
