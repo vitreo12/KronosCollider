@@ -11,6 +11,57 @@ import sys
 import os
 import platform
 import shutil
+import re
+
+def parseHeader(kronosHeaderFile: str):
+    ins = 1
+    outs = 1
+    bufsNames = []
+    bufsParams = []
+    paramsNames = []
+
+    #print(kronosHeaderFile)
+
+    # First pass: ins / outs and buffers (they don't interact with each other)
+    insToken = "typedef float KronosaudioInputType["
+    outsToken = "typedef float KronosOutputType["
+    bufInputTypeToken = "InputType["
+    for item in kronosHeaderFile.split("\n"):
+        # ins
+        if insToken in item:
+            insStr = item.replace(insToken, "")
+            insIdx = insStr.rfind("];")
+            ins = int(insStr[:insIdx])
+
+        # outs
+        if outsToken in item:
+            outsStr = item.replace(outsToken, "")
+            outsIdx = outsStr.rfind("];")
+            outs = int(outsStr[:outsIdx])
+
+        # Buffers    
+        if bufInputTypeToken in item and insToken not in item:
+            bufName = item.replace("typedef float Kronos", "")
+            inputTypeIdx = bufName.rfind(bufInputTypeToken)
+            bufName = bufName[:inputTypeIdx].lower()
+            bufsNames.append(bufName)
+            bufsParams.append(bufName + "samplerate")
+            bufsParams.append(bufName + "size")
+            bufsParams.append(bufName + "frames")
+            bufsParams.append(bufName + "numchans")
+
+    # Params (they need buffers to be done)
+    kronosSetToken = "static void KronosSet"
+    kronosInstancePtrToken = "(KronosInstancePtr instance, const float*"
+    for item in kronosHeaderFile.split("\n"):
+        if kronosSetToken and kronosInstancePtrToken  in item:
+            paramName = item.replace(kronosSetToken, "")
+            kronosInstancePtrIdx = paramName.rfind(kronosInstancePtrToken)
+            paramName = paramName[:kronosInstancePtrIdx].lower()
+            if paramName not in bufsParams: # Exculde buffer params
+                paramsNames.append(paramName)
+    
+    return (ins, outs, len(paramsNames), paramsNames, len(bufsNames), bufsNames)
 
 def main() -> int:
     # Kronos file stuff
@@ -48,8 +99,14 @@ def main() -> int:
     # Compile kronos code (prefix with Kronos)
     kronosFile = name + ".k"
     headerFile = name + ".h"
-    kc = "kc -O 3 -H ./" + headerFile + " -P " + name + " " + kronosFile
-    os.system(kc)
+    kc = "kc -O 3 -H ./" + headerFile + " -P Kronos " + kronosFile
+    if (os.system(kc) != 0):
+        return 1
+
+    with open(headerFile, "r") as text_file:
+        kronosHeaderFile = text_file.read()
+
+    print(parseHeader(kronosHeaderFile))
 
     return 0
 
