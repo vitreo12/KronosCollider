@@ -30,7 +30,7 @@ def parseHeader(kronosHeaderFile: str):
     bufInputTypeToken = "InputType["
     for item in kronosHeaderFile.split("\n"):
         # Audio tick exists
-        if "KronosAudioTick" in item:
+        if "KronosTickAudio" in item:
             tickAudio = True
 
         # TickBlock exists
@@ -71,7 +71,6 @@ def parseHeader(kronosHeaderFile: str):
             if paramName not in bufsParams: # Exculde buffer params
                 paramsNames.append(paramName)
     
-
     #print(kronosHeaderFile)
 
     return (tickAudio, tickBlock, ins, outs, paramsNames, bufsNames)
