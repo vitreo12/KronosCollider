@@ -5,7 +5,6 @@ import sys
 import os
 import platform
 import shutil
-import re
 
 def parseHeader(kronosHeaderFile: str):
     ins = 0
