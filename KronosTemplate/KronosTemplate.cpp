@@ -54,11 +54,11 @@ for (int i = 0; i < unit->mNumOutputs; i++) {
 #define INS_MULTI_NEXT INS_INTERLEAVE KronosSetAudio(unit->m_obj, unit->m_ins);
 #define OUTS_MULTI_NEXT KronosTickAudio(unit->m_obj, unit->m_outs, inNumSamples); OUTS_DEINTERLEAVE
 
-#define BUFFER_CHECK_DATA(buffer) \
+#define BUFFER_CHECK_DATA(name) \
 if (!bufData) { \
-    if (unit->mWorld->mVerbosity > -1 && !unit->mDone && (buffer.m_failedBufNum != fbufnum)) { \
+    if (unit->mWorld->mVerbosity > -1 && !unit->mDone && (unit->name.m_failedBufNum != fbufnum)) { \
         Print("KronosTemplate: no buffer data\n"); \
-        buffer.m_failedBufNum = fbufnum; \
+        unit->name.m_failedBufNum = fbufnum; \
     } \
     ClearUnitOutputs(unit, inNumSamples); \
     return; \
@@ -77,7 +77,7 @@ if (fbufnum != unit->name.m_fbufnum) { \
 const SndBuf* buf = unit->name.m_buf; \
 ACQUIRE_SNDBUF_SHARED(buf); \
 const float* bufData = buf->data; \
-BUFFER_CHECK_DATA(buffer); \
+BUFFER_CHECK_DATA(name); \
 float bufSamples = (float)buf->samples; \
 float bufFrames  = (float)buf->frames; \
 float numChans   = (float)buf->channels \
