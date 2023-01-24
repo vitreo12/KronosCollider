@@ -1,4 +1,4 @@
-set(FILENAME "KronosTemplate.cpp")
+set(FILENAME "${KRONOS_TEMPLATE}.cpp")
 cmake_minimum_required (VERSION 3.0)
 get_filename_component(PROJECT ${FILENAME} NAME_WE)
 
@@ -7,7 +7,6 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.10" CACHE STRING "Minimum OS X deployment ve
 
 #Define project
 project (${PROJECT})
-message(STATUS "Build dir: ${OMNI_BUILD_DIR}")
 
 #SC includes
 include_directories(${SC_PATH}/include/plugin_interface)
@@ -101,9 +100,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG")
 set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE}   -O3 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
 
-#Build architecture... if not none, pass the flags through
-message(STATUS "BUILD ARCHITECTURE : ${BUILD_MARCH}")
-if (NOT BUILD_MARCH STREQUAL "none")
+#Build architecture
+if (DEFINED BUILD_MARCH)
+    message(STATUS "Build architecture: ${BUILD_MARCH}")
     add_definitions(-march=${BUILD_MARCH})
     set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -march=${BUILD_MARCH}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=${BUILD_MARCH}")

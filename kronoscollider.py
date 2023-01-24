@@ -8,7 +8,7 @@ import shutil
 import re
 
 def parseHeader(kronosHeaderFile: str):
-    ins = 1
+    ins = 0
     outs = 1
     tickAudio = False
     bufsDict = {}
@@ -95,8 +95,9 @@ def writeFiles(name, ins, outs, params, buffers):
     scMultiNew = "^this.multiNew('audio',"
     scMultiOut = "init { arg ... theInputs;\n        inputs = theInputs;\n        ^this.initOutputs(" + str(outs) + ", rate);\n    }"
     
-    # Block tick
-    if len(params) + len(buffers) > 0:
+    numParams = len(params) + len(buffers)
+    cppFile = cppFile.replace("// num params", "#define NUM_PARAMS " + str(numParams))
+    if numParams > 0:
         cppFile = cppFile.replace("// tick block", "TICK_BLOCK")
 
     # ins / outs
@@ -105,16 +106,17 @@ def writeFiles(name, ins, outs, params, buffers):
         cppFile = cppFile.replace("// ins ctor", "INS_CTOR")
         cppFile = cppFile.replace("// ins dtor", "INS_DTOR")
         cppFile = cppFile.replace("// ins next", "INS_MULTI_NEXT")
-    else:
+    elif ins == 1: # ins can also be 0, in which case nothing needs to be added
         cppFile = cppFile.replace("// ins next", "INS_MONO_NEXT")
 
     for i in range(ins):
         inName = "in" + str(i + 1)
         scArgs = scArgs + inName + "=(0),"
         scMultiNew = scMultiNew + inName + ","
-        scFile = scFile.replace("// rates", "// rates\n        if(" + inName + ".rate != audio, {\"" + name + ": expected '" + inName + "' to be at audio rate. Wrapping it in a K2A UGen.\".warn; " + inName + " = K2A.ar(" + inName + ")});")   
+        scFile = scFile.replace("// rates", "// rates\n        if(" + inName + ".rate != 'audio', {\"" + name + ": expected '" + inName + "' to be at audio rate. Wrapping it in a K2A UGen.\".warn; " + inName + " = K2A.ar(" + inName + ")});")   
         
     if outs > 1:
+        scFile = scFile.replace("UGen", "MultiOutUGen")
         scFile = scFile.replace("// multiOut", scMultiOut)
         cppFile = cppFile.replace("// outs unit", "OUTS_UNIT")
         cppFile = cppFile.replace("// outs ctor", "OUTS_CTOR")
@@ -157,11 +159,11 @@ def writeFiles(name, ins, outs, params, buffers):
         scFile = scFile.replace("// args", scArgs)
         scFile = scFile.replace("// multiNew", scMultiNew)
 
-    print("CPP FILE \n")
-    print(cppFile)
+    #print("CPP FILE \n")
+    #print(cppFile)
     
-    print("SC FILE \n")
-    print(scFile)
+    #print("SC FILE \n")
+    #print(scFile)
     
     with open("KronosTemplate.cpp", "w") as file:
         file.write(cppFile)
@@ -173,11 +175,38 @@ def writeFiles(name, ins, outs, params, buffers):
 
     return
 
+def buildFiles(name, scPath, scExtensions):
+    os.mkdir("build")
+    os.chdir("build")
+    windowsMingw = ""
+    if platform.system() == "Windows":
+        windowsMingw = "\"MinGW Makefiles\" -DCMAKE_MAKE_PROGRAM:PATH=\"make\""
+    os.system("cmake " + windowsMingw + " -DSC_PATH=" + scPath + " -DKRONOS_TEMPLATE=" + name + " -DCMAKE_BUILD_TYPE=Release -DSUPERNOVA=ON ..")
+    os.system("cmake --build . --config Release")
+    os.mkdir(name)
+    if platform.system() == "Linux":
+        ext = '.so'
+    else:
+        ext = ".scx"
+    shutil.copy(name + ext, name)
+    shutil.copy(name + "_supernova" + ext, name)
+    shutil.copy("../" + name + ".sc", name)
+    dirInExtensions = scExtensions + "/" + name
+    if os.path.exists(dirInExtensions):
+        shutil.rmtree(dirInExtensions, ignore_errors=True)
+    shutil.copytree(name, dirInExtensions)
+    return
+
 def main() -> int:
-    # Check file exists and extract name
+    scPath = "~/Sources/supercollider/"
+    scPath = os.path.abspath(os.path.expanduser(scPath))
+
+    scExtensions = "~/.local/share/SuperCollider/Extensions/"
+    scExtensions = os.path.abspath(os.path.expanduser(scExtensions))
+
     kronosFile = "~/Sources/KronosBuffer/KronosBuffer.k"
     kronosFile = os.path.abspath(os.path.expanduser(kronosFile))
-    if(not os.path.exists(kronosFile)):
+    if not os.path.exists(kronosFile):
         print("ERROR: " + kronosFile + " does not exist")
         return 1
     kronosFileSplit = os.path.splitext(kronosFile)
@@ -193,7 +222,7 @@ def main() -> int:
         os.mkdir(cacheKronosCollider)
 
     outDir = cacheKronosCollider + name
-    if(os.path.exists(outDir)):
+    if os.path.exists(outDir):
         shutil.rmtree(outDir, ignore_errors=True)
     os.mkdir(outDir)
 
@@ -212,7 +241,7 @@ def main() -> int:
     kronosFile = name + ".k"
     headerFile = name + ".h"
     kc = "kc -O 3 -H ./" + headerFile + " -P Kronos " + kronosFile
-    if (os.system(kc) != 0):
+    if os.system(kc) != 0:
         return 1
 
     with open(headerFile, "r") as text_file:
@@ -229,12 +258,9 @@ def main() -> int:
     #print("outs:", outs)
     #print("params:", params)
     #print("buffers:", buffers)
-
+    
     writeFiles(name, ins, outs, params, buffers)
-
-    # Build
-
-    # Copy folder to extensions dir
+    buildFiles(name, scPath, scExtensions)
 
     return 0
 
