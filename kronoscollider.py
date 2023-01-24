@@ -60,13 +60,17 @@ def parseHeader(kronosHeaderFile: str):
         if kronosSetToken and kronosInstancePtrToken in item:
             paramName = item.replace(kronosSetToken, "")
             kronosInstancePtrIdx = paramName.rfind(kronosInstancePtrToken)
-            paramName = paramName[:kronosInstancePtrIdx].lower()
+            paramName = paramName[:kronosInstancePtrIdx]
+            default = float(paramName[paramName.rfind("Default"):].replace("Default", "").replace("d", "."))
+            paramName = paramName[:paramName.rfind("Default")].lower()
             if paramName not in bufsParams: # Exclude buffer params
                 slotIndex = kronosHeaderFileSplit[i + 1]
                 slotIndex = slotIndex.replace("*KronosGetValue(instance, ", "")
                 slotIndexIdx = slotIndex.rfind(") = (void*)")
                 slotIndex = int(slotIndex[:slotIndexIdx])
-                paramsDict[paramName] = slotIndex
+                paramsDict[paramName] = {}
+                paramsDict[paramName]["slotIndex"] = slotIndex
+                paramsDict[paramName]["default"] = default
             else: # Add buffer params to existing buf dict
                 for param in ["size", "frames", "numchans", "samplerate"]:
                     if param in paramName:
@@ -93,20 +97,20 @@ def writeFiles(name, ins, outs, params, buffers):
     
     # Block tick
     if len(params) + len(buffers) > 0:
-        cppFile = cppFile.replace("// tick block", "KronosTickBlock(unit->m_obj, nullptr, 1);")
+        cppFile = cppFile.replace("// tick block", "TICK_BLOCK")
 
     # ins / outs
     if ins > 1:
         cppFile = cppFile.replace("// ins unit", "INS_UNIT")
         cppFile = cppFile.replace("// ins ctor", "INS_CTOR")
         cppFile = cppFile.replace("// ins dtor", "INS_DTOR")
-        cppFile = cppFile.replace("// ins next", "INS_INTERLEAVE\n    KronosSetAudio(unit->m_obj, unit->m_ins);")
+        cppFile = cppFile.replace("// ins next", "INS_MULTI_NEXT")
     else:
-        cppFile = cppFile.replace("// ins next", "KronosSetAudio(unit->m_obj, IN(0));")
+        cppFile = cppFile.replace("// ins next", "INS_MONO_NEXT")
 
     for i in range(ins):
         inName = "in" + str(i + 1)
-        scArgs = scArgs + inName + ","
+        scArgs = scArgs + inName + "=(0),"
         scMultiNew = scMultiNew + inName + ","
         scFile = scFile.replace("// rates", "// rates\n        if(" + inName + ".rate != audio, {\"" + name + ": expected '" + inName + "' to be at audio rate. Wrapping it in a K2A UGen.\".warn; " + inName + " = K2A.ar(" + inName + ")});")   
         
@@ -115,30 +119,32 @@ def writeFiles(name, ins, outs, params, buffers):
         cppFile = cppFile.replace("// outs unit", "OUTS_UNIT")
         cppFile = cppFile.replace("// outs ctor", "OUTS_CTOR")
         cppFile = cppFile.replace("// outs dtor", "OUTS_DTOR")
-        cppFile = cppFile.replace("// outs next", "KronosTickAudio(unit->m_obj, unit->m_outs, inNumSamples);\n    OUTS_DEINTERLEAVE")
+        cppFile = cppFile.replace("// outs next", "OUTS_MULTI_NEXT")
     else:
-        cppFile = cppFile.replace("// outs next", "KronosTickAudio(unit->m_obj, OUT(0), inNumSamples);")
+        cppFile = cppFile.replace("// outs next", "OUTS_MONO_NEXT")
 
     # params
     paramIdx = ins # start counting after audio inputs
-    for paramName, slotIndex in params.items():
+    for paramName, param in params.items():
+        slotIndex = param["slotIndex"]
+        default = param["default"]
         cppFile = cppFile.replace("// params next", "// params next\n    PARAM_SET(" + str(slotIndex) + "," + str(paramIdx) + ")")
-        scFile = scFile.replace("// rates", "// rates\n        if(" + paramName + ".rate == audio, {\"" + name + ": expected '" + paramName + "' to be at control rate. Wrapping it in a A2K UGen.\".warn; " + paramName + " = A2K.kr(" + paramName + ")});")
-        scArgs = scArgs + paramName + ","
+        # scFile = scFile.replace("// rates", "// rates\n        if(" + paramName + ".rate == audio, {\"" + name + ": expected '" + paramName + "' to be at control rate. Wrapping it in a A2K UGen.\".warn; " + paramName + " = A2K.kr(" + paramName + ")});")
+        scArgs = scArgs + paramName + "=(" + str(default) + "),"
         scMultiNew = scMultiNew + paramName + ","
         paramIdx += 1
 
     # Buffers
     bufferIdx = paramIdx # start counting after params
-    for bufName, params in buffers.items():
-        scArgs = scArgs + bufName + ","
+    for bufName, param in buffers.items():
+        scArgs = scArgs + bufName + "=(-1),"
         scMultiNew = scMultiNew + bufName + ","
-        scFile = scFile.replace("// rates", "// rates\n        if(" + bufName + ".class != Buffer, {\"" + name + ": expected '" + bufName + "' to be at control rate. Wrapping it in a A2K UGen.\".warn; " + bufName + " = A2K.kr(" + bufName + ")});")
-        slotIndex = str(params["slotIndex"])
-        slotIndexSize = str(params["slotIndex_size"])
-        slotIndexFrames = str(params["slotIndex_frames"])
-        slotIndexNumChans = str(params["slotIndex_numchans"])
-        slotIndexSR = str(params["slotIndex_samplerate"])
+        # scFile = scFile.replace("// rates", "// rates\n        if(" + bufName + ".class != Buffer, {\"" + name + ": expected '" + bufName + "' to be at control rate. Wrapping it in a A2K UGen.\".warn; " + bufName + " = A2K.kr(" + bufName + ")});")
+        slotIndex = str(param["slotIndex"])
+        slotIndexSize = str(param["slotIndex_size"])
+        slotIndexFrames = str(param["slotIndex_frames"])
+        slotIndexNumChans = str(param["slotIndex_numchans"])
+        slotIndexSR = str(param["slotIndex_samplerate"])
         cppFile = cppFile.replace("// buffers unit", "// buffers unit\n    BUFFER_UNIT(" + bufName + ")")
         cppFile = cppFile.replace("// buffers ctor", "// buffers ctor\n    BUFFER_CTOR(" + bufName + ")")
         cppFile = cppFile.replace("// buffers next", "// buffers next\n    BUFFER_NEXT(" + bufName + "," + str(bufferIdx) + "," + slotIndex + "," + slotIndexSize + "," + slotIndexFrames + "," + slotIndexNumChans + "," + slotIndexSR + ")")

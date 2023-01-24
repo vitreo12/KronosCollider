@@ -49,6 +49,11 @@ for (int i = 0; i < unit->mNumOutputs; i++) {
         OUT(i)[y] = unit->m_outs[y][i]; \
 }
 
+#define INS_MONO_NEXT KronosSetAudio(unit->m_obj, IN(0));
+#define OUTS_MONO_NEXT KronosTickAudio(unit->m_obj, OUT(0), inNumSamples);
+#define INS_MULTI_NEXT INS_INTERLEAVE KronosSetAudio(unit->m_obj, unit->m_ins);
+#define OUTS_MULTI_NEXT KronosTickAudio(unit->m_obj, unit->m_outs, inNumSamples); OUTS_DEINTERLEAVE
+
 #define BUFFER_CHECK_DATA(buffer) \
 if (!bufData) { \
     if (unit->mWorld->mVerbosity > -1 && !unit->mDone && (buffer.m_failedBufNum != fbufnum)) { \
@@ -88,6 +93,8 @@ RELEASE_SNDBUF_SHARED(unit->name.m_buf);
 
 #define PARAM_SET(slotIndex, index) \
 *KronosGetValue(unit->m_obj, slotIndex) = (void*)IN0(index);
+
+#define TICK_BLOCK KronosTickBlock(unit->m_obj, nullptr, 1);
 
 struct Buffer {
     float m_fbufnum;
