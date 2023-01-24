@@ -1,10 +1,10 @@
 # linux / macos: compile to ~/.cache
 # windows: compile to C:\Windows\Temp
 
-import sys
 import os
 import platform
 import shutil
+import sys
 
 def parseHeader(kronosHeaderFile: str):
     ins = 0
