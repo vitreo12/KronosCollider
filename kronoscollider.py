@@ -1,5 +1,4 @@
-# linux / macos: compile to ~/.cache
-# windows: compile to C:\Windows\Temp
+#!/usr/bin/env python3
 
 import os
 import platform
