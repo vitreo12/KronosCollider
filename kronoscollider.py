@@ -225,7 +225,7 @@ def main() -> int:
     os.mkdir(outDir)
 
     # Copy files and cd into it
-    cwd = os.getcwd()
+    cwd = os.path.dirname(os.path.realpath(__file__))
     cppFile = cwd + "/KronosTemplate/KronosTemplate.cpp"
     cmakeFile = cwd + "/KronosTemplate/CMakeLists.txt"
     scFile = cwd + "/KronosTemplate/KronosTemplate.sc"
