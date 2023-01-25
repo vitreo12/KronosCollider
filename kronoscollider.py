@@ -219,7 +219,7 @@ def main(kronosFile, scPath, extPath, removeCache) -> int:
     cwd = os.path.dirname(os.path.realpath(__file__))
     kronosExternalPath = cwd + "/KronosExternal/main.k"
     if not os.path.exists(kronosExternalPath):
-        print("WARNING: KronosExternal hasn't been cloned correctly. Running 'git submodule update --init --recursive' ...")
+        print("WARNING: KronosExternal hasn't been cloned correctly. Running 'git submodule update --init --recursive'...")
         if os.system('git submodule update --init --recursive') != 0:
             return 1
 
@@ -311,7 +311,7 @@ if __name__ == '__main__':
     scDir = "~/Sources/supercollider/"
 
     parser = argparse.ArgumentParser(
-        prog = 'KronosCollider',
+        prog = 'kronoscollider.py',
         description = 'Compile Kronos code to SuperCollider UGens',
         formatter_class = RemoveMetavarFormatter
     )
