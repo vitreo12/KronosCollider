@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import platform
 import shutil
@@ -137,7 +138,7 @@ def writeFiles(name, ins, outs, params, buffers):
     # Buffers
     bufferIdx = paramIdx # start counting after params
     for bufName, param in buffers.items():
-        scArgs = scArgs + bufName + "=(-1),"
+        scArgs = scArgs + bufName + "=(0),"
         scMultiNew = scMultiNew + bufName + ","
         # scFile = scFile.replace("// rates", "// rates\n        if(" + bufName + ".class != Buffer, {\"" + name + ": expected '" + bufName + "' to be at control rate. Wrapping it in a A2K UGen.\".warn; " + bufName + " = A2K.kr(" + bufName + ")});")
         slotIndex = str(param["slotIndex"])
@@ -173,7 +174,7 @@ def writeFiles(name, ins, outs, params, buffers):
 
     return
 
-def buildFiles(name, scPath, scExtensions):
+def buildFiles(name, scPath, extPath):
     os.mkdir("build")
     os.chdir("build")
     windowsMingw = ""
@@ -189,20 +190,19 @@ def buildFiles(name, scPath, scExtensions):
     shutil.copy(name + ext, name)
     shutil.copy(name + "_supernova" + ext, name)
     shutil.copy("../" + name + ".sc", name)
-    dirInExtensions = scExtensions + "/" + name
+    dirInExtensions = extPath + "/" + name
     if os.path.exists(dirInExtensions):
         shutil.rmtree(dirInExtensions, ignore_errors=True)
     shutil.copytree(name, dirInExtensions)
     return
 
-def main() -> int:
-    scPath = "~/Sources/supercollider/"
-    scPath = os.path.abspath(os.path.expanduser(scPath))
-
-    scExtensions = "~/.local/share/SuperCollider/Extensions/"
-    scExtensions = os.path.abspath(os.path.expanduser(scExtensions))
-
-    kronosFile = "~/Sources/KronosBuffer/KronosBuffer.k"
+def getCache():
+    if platform.system() == 'Windows':
+        return "C:\\Windows\\Temp\\KronosCollider\\"
+    else:
+        return "~/.cache/KronosCollider/"
+    
+def main(kronosFile, scPath, extPath, removeCache) -> int:
     kronosFile = os.path.abspath(os.path.expanduser(kronosFile))
     if not os.path.exists(kronosFile):
         print("ERROR: " + kronosFile + " does not exist")
@@ -210,15 +210,13 @@ def main() -> int:
     kronosFileSplit = os.path.splitext(kronosFile)
     name = kronosFileSplit[0].split('/')[-1]
 
+    scPath = os.path.abspath(os.path.expanduser(scPath))
+    extPath = os.path.abspath(os.path.expanduser(extPath))
+
     # mkdir in cache
-    if platform.system() == 'Windows':
-        cacheKronosCollider = "C:\\Windows\\Temp\\KronosCollider\\"
-    else:
-        cacheKronosCollider = "~/.cache/KronosCollider/"
-    cacheKronosCollider = os.path.expanduser(cacheKronosCollider)
+    cacheKronosCollider = os.path.expanduser(getCache())
     if(not os.path.exists(cacheKronosCollider)):
         os.mkdir(cacheKronosCollider)
-
     outDir = cacheKronosCollider + name
     if os.path.exists(outDir):
         shutil.rmtree(outDir, ignore_errors=True)
@@ -258,9 +256,66 @@ def main() -> int:
     #print("buffers:", buffers)
     
     writeFiles(name, ins, outs, params, buffers)
-    buildFiles(name, scPath, scExtensions)
+    buildFiles(name, scPath, extPath)
+
+    # Remove the build folder (if)
+    if removeCache:
+        shutil.rmtree(outDir, ignore_errors=True)
 
     return 0
 
+# Parse strings to boolean for a better CLI experience
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+# Remove metavar from help file
+#https://devpress.csdn.net/python/62fe2a1dc67703293080479b.html
+class RemoveMetavarFormatter(argparse.HelpFormatter):
+    def _format_action_invocation(self, action):
+        if not action.option_strings:
+            metavar, = self._metavar_formatter(action, action.dest)(1)
+            return metavar
+        else:
+            parts = []
+            if action.nargs == 0:
+                parts.extend(action.option_strings)
+            else:
+                default = action.dest.upper()
+                args_string = self._format_args(action, default)
+                for option_string in action.option_strings:
+                    parts.append('%s' % option_string)
+                parts[-1] += ' %s'%args_string
+            return ', '.join(parts)
+
 if __name__ == '__main__':
-    sys.exit(main())
+    if platform.system() == 'Windows':
+        extensionsDir = "~\\AppData\\Local\\SuperCollider\\Extensions"
+    elif platform.system() == 'Darwin':
+        extensionsDir = "~/Library/Application Support/SuperCollider/Extensions"
+    else:
+        extensionsDir = "~/.local/share/SuperCollider/Extensions/"
+    
+    scDir = "~/Sources/supercollider/"
+
+    parser = argparse.ArgumentParser(
+        prog = 'KronosCollider',
+        description = 'Compile Kronos code to SuperCollider UGens',
+        formatter_class = RemoveMetavarFormatter
+    )
+    parser.add_argument('file', metavar = 'file', type = str, help = 'The .k file to compile')
+    parser.add_argument('-s','--scPath', metavar = '', dest = 'scPath', type = str, default = scDir,
+                help = "The path to the SuperCollider source files. Defaults to: '" + scDir + "'")
+    parser.add_argument('-e', '--extPath', metavar = '', dest = 'extPath', type = str, default = extensionsDir,
+                help = "The path to the SuperCollider extensions directory. Defaults to: '" + extensionsDir + "'")
+    parser.add_argument('-r', '--removeCache', metavar = '', dest = 'removeCache', type = str2bool, default = True,
+                help = "Remove the build files from the cache folder in: '" + getCache() + "'")
+    
+    args = parser.parse_args()
+    sys.exit(main(args.file, args.scPath, args.extPath, args.removeCache))
