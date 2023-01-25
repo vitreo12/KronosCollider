@@ -6,7 +6,10 @@ import platform
 import shutil
 import sys
 
-def parseHeader(kronosHeaderFile: str):
+def parseHeader(headerFile: str):
+    with open(headerFile, "r") as text_file:
+        kronosHeaderFile = text_file.read()
+        
     ins = 0
     outs = 1
     tickAudio = False
@@ -240,10 +243,7 @@ def main(kronosFile, scPath, extPath, removeCache) -> int:
     if os.system(kc) != 0:
         return 1
 
-    with open(headerFile, "r") as text_file:
-        kronosHeaderFile = text_file.read()
-
-    (tickAudio, ins, outs, params, buffers) = parseHeader(kronosHeaderFile)
+    (tickAudio, ins, outs, params, buffers) = parseHeader(headerFile)
 
     # If tickAudio doesn't exist, quit: it's not an audio obj
     if not tickAudio:
