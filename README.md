@@ -56,7 +56,7 @@ To specify `Params` and `Buffers`, `KronosCollider` leverages the [KronosExterna
 Run the `kronoscollider.py` script. 
 
 ```
-usage: kronoscollider.py [-h] [-s] [-e] [-r] file
+usage: kronoscollider.py [-h] [-s] [-e] [-r] [-i] file
 
 Compile Kronos code to SuperCollider UGens
 
@@ -67,5 +67,6 @@ options:
   -h, --help          show this help message and exit
   -s, --scPath        The path to the SuperCollider source files. Defaults to: '~/Sources/supercollider/'
   -e, --extPath       The path to the SuperCollider extensions directory. Defaults to: '~/.local/share/SuperCollider/Extensions/'
-  -r, --removeCache   Remove the build files from the cache folder in: '~/.cache/KronosCollider/'
+  -r, --removeCache   Remove the build files from the cache folder in: '~/.cache/KronosCollider/'. Defaults to 1
+  -i, --external      Import the KronosExternal module automatically. Defaults to 1
 ```

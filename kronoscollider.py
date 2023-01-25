@@ -205,7 +205,7 @@ def getCache():
     else:
         return "~/.cache/KronosCollider/"
     
-def main(kronosFile, scPath, extPath, removeCache) -> int:
+def main(kronosFile, scPath, extPath, removeCache, importKronosExternal) -> int:
     kronosFile = os.path.abspath(os.path.expanduser(kronosFile))
     if not os.path.exists(kronosFile):
         print("ERROR: " + kronosFile + " does not exist")
@@ -217,11 +217,15 @@ def main(kronosFile, scPath, extPath, removeCache) -> int:
     extPath = os.path.abspath(os.path.expanduser(extPath))
 
     cwd = os.path.dirname(os.path.realpath(__file__))
-    kronosExternalPath = cwd + "/KronosExternal/main.k"
-    if not os.path.exists(kronosExternalPath):
-        print("WARNING: KronosExternal hasn't been cloned correctly. Running 'git submodule update --init --recursive'...")
-        if os.system('git submodule update --init --recursive') != 0:
-            return 1
+
+    if importKronosExternal:
+        kronosExternalPath = cwd + "/KronosExternal/main.k"
+        if not os.path.exists(kronosExternalPath):
+            print("WARNING: KronosExternal hasn't been cloned correctly. Running 'git submodule update --init --recursive'...")
+            if os.system('git submodule update --init --recursive') != 0:
+                return 1
+    else:
+        kronosExternalPath = ""
 
     # mkdir in cache
     cacheKronosCollider = os.path.expanduser(getCache())
@@ -321,7 +325,9 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--extPath', metavar = '', dest = 'extPath', type = str, default = extensionsDir,
                 help = "The path to the SuperCollider extensions directory. Defaults to: '" + extensionsDir + "'")
     parser.add_argument('-r', '--removeCache', metavar = '', dest = 'removeCache', type = str2bool, default = True,
-                help = "Remove the build files from the cache folder in: '" + getCache() + "'")
+                help = "Remove the build files from the cache folder in: '" + getCache() + "'. Defaults to 1")
+    parser.add_argument('-i', '--external', metavar = '', dest = 'importKronosExternal', type = str2bool, default = True,
+                help = "Import the KronosExternal module automatically. Defaults to 1")
     
     args = parser.parse_args()
-    sys.exit(main(args.file, args.scPath, args.extPath, args.removeCache))
+    sys.exit(main(args.file, args.scPath, args.extPath, args.removeCache, args.importKronosExternal))
