@@ -19,9 +19,7 @@ positional arguments:
 
 options:
   -h, --help          show this help message and exit
-  -s, --scPath        The path to the SuperCollider source files. Defaults to:
-                      '~/Sources/supercollider/'
-  -e, --extPath       The path to the SuperCollider extensions directory. Defaults to:
-                      '~/.local/share/SuperCollider/Extensions/'
+  -s, --scPath        The path to the SuperCollider source files. Defaults to: '~/Sources/supercollider/'
+  -e, --extPath       The path to the SuperCollider extensions directory. Defaults to: '~/.local/share/SuperCollider/Extensions/'
   -r, --removeCache   Remove the build files from the cache folder in: '~/.cache/KronosCollider/'
 ```
