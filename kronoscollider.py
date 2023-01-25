@@ -216,9 +216,16 @@ def main(kronosFile, scPath, extPath, removeCache) -> int:
     scPath = os.path.abspath(os.path.expanduser(scPath))
     extPath = os.path.abspath(os.path.expanduser(extPath))
 
+    cwd = os.path.dirname(os.path.realpath(__file__))
+    kronosExternalPath = cwd + "/KronosExternal/main.k"
+    if not os.path.exists(kronosExternalPath):
+        print("WARNING: KronosExternal hasn't been cloned correctly. Running 'git submodule update --init --recursive' ...")
+        if os.system('git submodule update --init --recursive') != 0:
+            return 1
+
     # mkdir in cache
     cacheKronosCollider = os.path.expanduser(getCache())
-    if(not os.path.exists(cacheKronosCollider)):
+    if not os.path.exists(cacheKronosCollider):
         os.mkdir(cacheKronosCollider)
     outDir = cacheKronosCollider + name
     if os.path.exists(outDir):
@@ -226,7 +233,6 @@ def main(kronosFile, scPath, extPath, removeCache) -> int:
     os.mkdir(outDir)
 
     # Copy files and cd into it
-    cwd = os.path.dirname(os.path.realpath(__file__))
     cppFile = cwd + "/KronosTemplate/KronosTemplate.cpp"
     cmakeFile = cwd + "/KronosTemplate/CMakeLists.txt"
     scFile = cwd + "/KronosTemplate/KronosTemplate.sc"
@@ -239,7 +245,7 @@ def main(kronosFile, scPath, extPath, removeCache) -> int:
     # Compile kronos code (prefix with Kronos)
     kronosFile = name + ".k"
     headerFile = name + ".h"
-    kc = "kc -O 3 -H ./" + headerFile + " -P Kronos " + kronosFile
+    kc = "kc -O 3 -H ./" + headerFile + " -P Kronos " + kronosFile + " " + kronosExternalPath
     if os.system(kc) != 0:
         return 1
 
