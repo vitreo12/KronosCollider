@@ -30,7 +30,7 @@ To specify `Params` and `Buffers`, `KronosCollider` leverages the [KronosExterna
     Use Buffer
 
     Main() {
-        ; Different ways to declare a Buffer. b2 limits the size to 48000 samples.
+        ; Different ways to declare a Buffer. b2 limits the maximum size to 48000 samples.
         ; If not specified, the default is 480000 (10 seconds of mono at 48khz).
         b1 = Buffer:New("b1")
         b2 = Buffer("b2" #48000)
