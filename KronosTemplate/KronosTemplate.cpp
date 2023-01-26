@@ -160,7 +160,6 @@ void KronosTemplate_Dtor(KronosTemplate* unit);
 // This function makes sure that the first value of the parameters in sclang (including buffers)
 // is used when initializing the kronos instance.
 inline void KronosInit(KronosTemplate* unit) {
-    int inNumSamples = 1;
     // params next
     // buffers init
     KronosInitialize(unit->m_obj, NULL);
