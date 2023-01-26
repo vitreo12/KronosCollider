@@ -5,6 +5,9 @@ static InterfaceTable *ft;
 
 // num params
 
+#define CONFIG_AUDIO \
+KronosConfigure_RateAudio(&unit->m_samplerate);
+
 #define INS_UNIT KronosaudioInputType* m_ins;
 #define OUTS_UNIT KronosOutputType* m_outs;
 #define BUFFER_UNIT(name) Buffer name;
@@ -51,23 +54,20 @@ for (int i = 0; i < unit->mNumOutputs; i++) { \
         OUT(i)[y] = unit->m_outs[y][i]; \
 }
 
-#define INS_MONO_NEXT KronosSetAudio(unit->m_obj, IN(0));
-#define OUTS_MONO_NEXT KronosTickAudio(unit->m_obj, OUT(0), inNumSamples);
-#define INS_MULTI_NEXT INS_INTERLEAVE KronosSetAudio(unit->m_obj, unit->m_ins);
-#define OUTS_MULTI_NEXT KronosTickAudio(unit->m_obj, unit->m_outs, inNumSamples); OUTS_DEINTERLEAVE
+#define INS_MONO_NEXT \
+KronosSetAudio(unit->m_obj, IN(0));
 
-#define BUFFER_CHECK_DATA(name) \
-if (!bufData) { \
-    if (unit->mWorld->mVerbosity > -1 && !unit->mDone && (unit->name.m_failedBufNum != fbufnum)) { \
-        Print("KronosTemplate: '%s' contains no buffer data\n", #name); \
-        unit->name.m_failedBufNum = fbufnum; \
-    } \
-    ClearUnitOutputs(unit, inNumSamples); \
-    return; \
-}
+#define OUTS_MONO_NEXT \
+KronosTickAudio(unit->m_obj, OUT(0), inNumSamples);
 
-#define BUFFER_NEXT(name, input, slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR) \
-float fbufnum = ZIN0(input); \
+#define INS_MULTI_NEXT \
+INS_INTERLEAVE KronosSetAudio(unit->m_obj, unit->m_ins);
+
+#define OUTS_MULTI_NEXT \
+KronosTickAudio(unit->m_obj, unit->m_outs, inNumSamples); OUTS_DEINTERLEAVE
+
+#define BUFFER_ACQUIRE_BUF(name, input) \
+float fbufnum = IN0(input); \
 if (fbufnum != unit->name.m_fbufnum) { \
     uint32 bufnum = (int)fbufnum; \
     World* world = unit->mWorld; \
@@ -78,25 +78,64 @@ if (fbufnum != unit->name.m_fbufnum) { \
 } \
 const SndBuf* buf = unit->name.m_buf; \
 ACQUIRE_SNDBUF_SHARED(buf); \
-const float* bufData = buf->data; \
-BUFFER_CHECK_DATA(name); \
-float bufSamples = (float)buf->samples; \
-float bufFrames  = (float)buf->frames; \
-float numChans   = (float)buf->channels; \
-float bufSampleRate = buf->samplerate; \
+const float* bufData = buf->data;
+
+#define BUFFER_PRINT_ERROR(name) \
+if (unit->mWorld->mVerbosity > -1 && !unit->mDone && (unit->name.m_failedBufNum != fbufnum)) { \
+    Print("KronosTemplate: '%s' contains no buffer data\n", #name); \
+    unit->name.m_failedBufNum = fbufnum; \
+} 
+
+#define BUFFER_CHECK_DATA_NEXT(name) \
+if (!bufData) { \
+    BUFFER_PRINT_ERROR(name) \
+    ClearUnitOutputs(unit, inNumSamples); \
+    return; \
+}
+
+#define BUFFER_CHECK_DATA_INIT(name) \
+bool valid_##name = true; \
+if (!bufData) { \
+    BUFFER_PRINT_ERROR(name) \
+    valid_##name = false; \
+}
+
+#define BUFFER_SET_PARAMS(slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR) \
+float bufSamples    = (float)buf->samples; \
+float bufFrames     = (float)buf->frames; \
+float numChans      = (float)buf->channels; \
+float bufSampleRate = (float)buf->samplerate; \
 *KronosGetValue(unit->m_obj, slotIndex) = (void*)bufData; \
 *KronosGetValue(unit->m_obj, slotIndexSize) = (void*)&bufSamples; \
 *KronosGetValue(unit->m_obj, slotIndexFrames) = (void*)&bufFrames; \
 *KronosGetValue(unit->m_obj, slotIndexNumChans) = (void*)&numChans; \
 *KronosGetValue(unit->m_obj, slotIndexSR) = (void*)&bufSampleRate;
 
-#define BUFFER_RELEASE(name) \
+#define BUFFER_NEXT(name, input, slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR) \
+BUFFER_ACQUIRE_BUF(name, input) \
+BUFFER_CHECK_DATA_NEXT(name); \
+BUFFER_SET_PARAMS(slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR)
+
+#define BUFFER_INIT(name, input, slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR) \
+BUFFER_ACQUIRE_BUF(name, input) \
+BUFFER_CHECK_DATA_INIT(name); \
+if (valid_##name) { \
+    BUFFER_SET_PARAMS(slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR) \
+}
+
+#define BUFFER_RELEASE_NEXT(name) \
 RELEASE_SNDBUF_SHARED(unit->name.m_buf);
 
-#define PARAM_SET(slotIndex, index) \
-*KronosGetValue(unit->m_obj, slotIndex) = (void*)&IN0(index);
+#define BUFFER_RELEASE_INIT(name) \
+if (valid_##name) { \
+    RELEASE_SNDBUF_SHARED(unit->name.m_buf); \
+}
 
-#define TICK_BLOCK KronosTickBlock(unit->m_obj, nullptr, 1);
+#define PARAM_SET(slotIndex, input) \
+*KronosGetValue(unit->m_obj, slotIndex) = (void*)&IN0(input);
+
+#define TICK_BLOCK \
+KronosTickBlock(unit->m_obj, nullptr, 1);
 
 struct Buffer {
     float m_fbufnum;
@@ -118,6 +157,16 @@ void KronosTemplate_Ctor(KronosTemplate* unit);
 void KronosTemplate_Dtor(KronosTemplate* unit);
 }
 
+// This function makes sure that the first value of the parameters in sclang (including buffers)
+// is used when initializing the kronos instance.
+inline void KronosInit(KronosTemplate* unit) {
+    int inNumSamples = 1;
+    // params next
+    // buffers init
+    KronosInitialize(unit->m_obj, NULL);
+    // buffers release init
+}
+
 void KronosTemplate_Ctor(KronosTemplate* unit) {
     // ins ctor
     // outs ctor
@@ -128,9 +177,9 @@ void KronosTemplate_Ctor(KronosTemplate* unit) {
     }
     memset(unit->m_obj, 0, KronosGetSize());
     unit->m_samplerate = unit->mWorld->mSampleRate;
-    KronosConfigure_RateAudio(&unit->m_samplerate);
-    KronosInitialize(unit->m_obj, NULL);
+    // config audio
     // buffers ctor
+    KronosInit(unit);
     SETCALC(KronosTemplate_next_a);
     KronosTemplate_next_a(unit, 1);
 }
@@ -148,7 +197,7 @@ void KronosTemplate_next_a(KronosTemplate* unit, int inNumSamples) {
     // buffers next
     // tick block
     // outs next
-    // buffers release
+    /// buffers release next
 }
 
 PluginLoad(KronosTemplateUGens) 

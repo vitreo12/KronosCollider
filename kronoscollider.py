@@ -6,6 +6,9 @@ import platform
 import shutil
 import sys
 
+def printError(msg):
+    print("\n*** ERROR: " + msg + " ***\n")
+
 def parseHeader(headerFile: str):
     with open(headerFile, "r") as text_file:
         kronosHeaderFile = text_file.read()
@@ -13,6 +16,7 @@ def parseHeader(headerFile: str):
     ins = 0
     outs = 1
     tickAudio = False
+    configAudio = False
     bufsDict = {}
     bufsParams = []
     paramsDict = {}
@@ -26,6 +30,10 @@ def parseHeader(headerFile: str):
         # Audio tick exists
         if "KronosTickAudio" in item:
             tickAudio = True
+        
+        # Configure audio exists
+        if "KronosConfigure_RateAudio" in item:
+            configAudio = True
 
         # ins
         if insToken in item:
@@ -66,6 +74,10 @@ def parseHeader(headerFile: str):
             default = float(paramName[paramName.rfind("Default"):].replace("Default", "").replace("d", "."))
             paramName = paramName[:paramName.rfind("Default")].lower()
             if paramName not in bufsParams: # Exclude buffer params
+                for param in ["size", "frames", "numchans", "samplerate"]: # Sanity check
+                    if param in paramName:
+                        printError("invalid param name: '" + paramName + "'. The Buffer object must call Read, ReadLinear or ReadHermite to be valid.")
+                        sys.exit(1)
                 slotIndex = kronosHeaderFileSplit[i + 1]
                 slotIndex = slotIndex.replace("*KronosGetValue(instance, ", "")
                 slotIndexIdx = slotIndex.rfind(") = (void*)")
@@ -83,9 +95,9 @@ def parseHeader(headerFile: str):
                         slotIndex = int(slotIndex[:slotIndexIdx])
                         bufsDict[bufname]["slotIndex_" + param] = slotIndex
     
-    return (tickAudio, ins, outs, paramsDict, bufsDict)
+    return (tickAudio, configAudio, ins, outs, paramsDict, bufsDict)
 
-def writeFiles(name, ins, outs, params, buffers):
+def writeFiles(name, configAudio, ins, outs, params, buffers):
     with open("KronosTemplate.cpp", "r") as text:
         cppFile = text.read()
     with open("KronosTemplate.sc", "r") as text:
@@ -97,6 +109,9 @@ def writeFiles(name, ins, outs, params, buffers):
     scMultiNew = "^this.multiNew('audio',"
     scMultiOut = "init { arg ... theInputs;\n        inputs = theInputs;\n        ^this.initOutputs(" + str(outs) + ", rate);\n    }"
     
+    if configAudio:
+        cppFile = cppFile.replace("// config audio", "CONFIG_AUDIO")
+
     numParams = len(params) + len(buffers)
     cppFile = cppFile.replace("// num params", "#define NUM_PARAMS " + str(numParams))
     if numParams > 0:
@@ -149,10 +164,12 @@ def writeFiles(name, ins, outs, params, buffers):
         slotIndexFrames = str(param["slotIndex_frames"])
         slotIndexNumChans = str(param["slotIndex_numchans"])
         slotIndexSR = str(param["slotIndex_samplerate"])
+        cppFile = cppFile.replace("// buffers init", "// buffers init\n    BUFFER_INIT(" + bufName + "," + str(bufferIdx) + "," + slotIndex + "," + slotIndexSize + "," + slotIndexFrames + "," + slotIndexNumChans + "," + slotIndexSR + ")")
+        cppFile = cppFile.replace("// buffers release init", "// buffers release init\n    BUFFER_RELEASE_INIT(" + bufName + ")")
         cppFile = cppFile.replace("// buffers unit", "// buffers unit\n    BUFFER_UNIT(" + bufName + ")")
         cppFile = cppFile.replace("// buffers ctor", "// buffers ctor\n    BUFFER_CTOR(" + bufName + ")")
         cppFile = cppFile.replace("// buffers next", "// buffers next\n    BUFFER_NEXT(" + bufName + "," + str(bufferIdx) + "," + slotIndex + "," + slotIndexSize + "," + slotIndexFrames + "," + slotIndexNumChans + "," + slotIndexSR + ")")
-        cppFile = cppFile.replace("// buffers release", "// buffers release\n    BUFFER_RELEASE(" + bufName + ")")
+        cppFile = cppFile.replace("// buffers release next", "// buffers release next\n    BUFFER_RELEASE_NEXT(" + bufName + ")")
         bufferIdx += 1
 
     if scArgs != "arg ":
@@ -208,7 +225,7 @@ def getCache():
 def main(kronosFile, scPath, extPath, removeCache, importKronosExternal) -> int:
     kronosFile = os.path.abspath(os.path.expanduser(kronosFile))
     if not os.path.exists(kronosFile):
-        print("ERROR: " + kronosFile + " does not exist")
+        printError(kronosFile + " does not exist")
         return 1
     kronosFileSplit = os.path.splitext(kronosFile)
     name = kronosFileSplit[0].split('/')[-1]
@@ -253,11 +270,11 @@ def main(kronosFile, scPath, extPath, removeCache, importKronosExternal) -> int:
     if os.system(kc) != 0:
         return 1
 
-    (tickAudio, ins, outs, params, buffers) = parseHeader(headerFile)
+    (tickAudio, configAudio, ins, outs, params, buffers) = parseHeader(headerFile)
 
     # If tickAudio doesn't exist, quit: it's not an audio obj
     if not tickAudio:
-        print("ERROR: Kronos code does not contain an audio tick output.")
+        printError("Kronos code does not contain an audio tick output")
         return 1
 
     #print("ins:", ins)
@@ -265,7 +282,7 @@ def main(kronosFile, scPath, extPath, removeCache, importKronosExternal) -> int:
     #print("params:", params)
     #print("buffers:", buffers)
     
-    writeFiles(name, ins, outs, params, buffers)
+    writeFiles(name, configAudio, ins, outs, params, buffers)
     buildFiles(name, scPath, extPath)
 
     # Remove the build folder (if)
