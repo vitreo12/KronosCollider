@@ -67,27 +67,27 @@ INS_INTERLEAVE KronosSetAudio(unit->m_obj, unit->m_ins);
 KronosTickAudio(unit->m_obj, unit->m_outs, inNumSamples); OUTS_DEINTERLEAVE
 
 #define BUFFER_ACQUIRE_BUF(name, input) \
-float fbufnum = IN0(input); \
-if (fbufnum != unit->name.m_fbufnum) { \
-    uint32 bufnum = (int)fbufnum; \
+float fbufnum_##name = IN0(input); \
+if (fbufnum_##name != unit->name.m_fbufnum) { \
+    uint32 bufnum = (int)fbufnum_##name; \
     World* world = unit->mWorld; \
     if (bufnum >= world->mNumSndBufs) \
         bufnum = 0; \
-    unit->name.m_fbufnum = fbufnum; \
+    unit->name.m_fbufnum = fbufnum_##name; \
     unit->name.m_buf = world->mSndBufs + bufnum; \
 } \
-const SndBuf* buf = unit->name.m_buf; \
-ACQUIRE_SNDBUF_SHARED(buf); \
-const float* bufData = buf->data;
+const SndBuf* buf_##name = unit->name.m_buf; \
+ACQUIRE_SNDBUF_SHARED(buf_##name); \
+const float* bufData_##name = buf_##name->data;
 
 #define BUFFER_PRINT_ERROR(name) \
-if (unit->mWorld->mVerbosity > -1 && !unit->mDone && (unit->name.m_failedBufNum != fbufnum)) { \
+if (unit->mWorld->mVerbosity > -1 && !unit->mDone && (unit->name.m_failedBufNum != fbufnum_##name)) { \
     Print("KronosTemplate: '%s' contains no buffer data\n", #name); \
-    unit->name.m_failedBufNum = fbufnum; \
+    unit->name.m_failedBufNum = fbufnum_##name; \
 } 
 
 #define BUFFER_CHECK_DATA_NEXT(name) \
-if (!bufData) { \
+if (!bufData_##name) { \
     BUFFER_PRINT_ERROR(name) \
     ClearUnitOutputs(unit, inNumSamples); \
     return; \
@@ -95,32 +95,32 @@ if (!bufData) { \
 
 #define BUFFER_CHECK_DATA_INIT(name) \
 bool valid_##name = true; \
-if (!bufData) { \
+if (!bufData_##name) { \
     BUFFER_PRINT_ERROR(name) \
     valid_##name = false; \
 }
 
-#define BUFFER_SET_PARAMS(slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR) \
-float bufSamples    = (float)buf->samples; \
-float bufFrames     = (float)buf->frames; \
-float numChans      = (float)buf->channels; \
-float bufSampleRate = (float)buf->samplerate; \
-*KronosGetValue(unit->m_obj, slotIndex) = (void*)bufData; \
-*KronosGetValue(unit->m_obj, slotIndexSize) = (void*)&bufSamples; \
-*KronosGetValue(unit->m_obj, slotIndexFrames) = (void*)&bufFrames; \
-*KronosGetValue(unit->m_obj, slotIndexNumChans) = (void*)&numChans; \
-*KronosGetValue(unit->m_obj, slotIndexSR) = (void*)&bufSampleRate;
+#define BUFFER_SET_PARAMS(name, slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR) \
+float bufSamples_##name    = (float)buf_##name->samples; \
+float bufFrames_##name     = (float)buf_##name->frames; \
+float numChans_##name      = (float)buf_##name->channels; \
+float bufSampleRate_##name = (float)buf_##name->samplerate; \
+*KronosGetValue(unit->m_obj, slotIndex) = (void*)bufData_##name; \
+*KronosGetValue(unit->m_obj, slotIndexSize) = (void*)&bufSamples_##name; \
+*KronosGetValue(unit->m_obj, slotIndexFrames) = (void*)&bufFrames_##name; \
+*KronosGetValue(unit->m_obj, slotIndexNumChans) = (void*)&numChans_##name; \
+*KronosGetValue(unit->m_obj, slotIndexSR) = (void*)&bufSampleRate_##name;
 
 #define BUFFER_NEXT(name, input, slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR) \
 BUFFER_ACQUIRE_BUF(name, input) \
 BUFFER_CHECK_DATA_NEXT(name); \
-BUFFER_SET_PARAMS(slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR)
+BUFFER_SET_PARAMS(name, slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR)
 
 #define BUFFER_INIT(name, input, slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR) \
 BUFFER_ACQUIRE_BUF(name, input) \
 BUFFER_CHECK_DATA_INIT(name); \
 if (valid_##name) { \
-    BUFFER_SET_PARAMS(slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR) \
+    BUFFER_SET_PARAMS(name, slotIndex, slotIndexSize, slotIndexFrames, slotIndexNumChans, slotIndexSR) \
 }
 
 #define BUFFER_RELEASE_NEXT(name) \
