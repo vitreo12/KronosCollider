@@ -196,7 +196,7 @@ void KronosTemplate_next_a(KronosTemplate* unit, int inNumSamples) {
     // buffers next
     // tick block
     // outs next
-    /// buffers release next
+    // buffers release next
 }
 
 PluginLoad(KronosTemplateUGens) 
