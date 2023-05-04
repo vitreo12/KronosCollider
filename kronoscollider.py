@@ -103,8 +103,12 @@ def writeFiles(name, configAudio, ins, outs, params, buffers):
     with open("KronosTemplate.sc", "r") as text:
         scFile = text.read()
 
-    cppFile = cppFile.replace("KronosTemplate", name)
-    scFile = scFile.replace("KronosTemplate", name)
+    # Use capitalize name as SC classes can't be lower case
+    nameCap = name.capitalize()
+
+    cppFile = cppFile.replace("#include \"KronosTemplate.h\"", "#include \"" + name + ".h\"")
+    cppFile = cppFile.replace("KronosTemplate", nameCap)
+    scFile = scFile.replace("KronosTemplate", nameCap)
     scArgs = "arg "
     scMultiNew = "^this.multiNew('audio',"
     scMultiOut = "init { arg ... theInputs;\n        inputs = theInputs;\n        ^this.initOutputs(" + str(outs) + ", rate);\n    }"
@@ -174,9 +178,10 @@ def writeFiles(name, configAudio, ins, outs, params, buffers):
 
     if scArgs != "arg ":
         scArgs = scArgs[:-1] + ";"
-        scMultiNew = scMultiNew[:-1] + ");"
         scFile = scFile.replace("// args", scArgs)
-        scFile = scFile.replace("// multiNew", scMultiNew)
+    
+    scMultiNew = scMultiNew[:-1] + ");"
+    scFile = scFile.replace("// multiNew", scMultiNew)
 
     #print("CPP FILE \n")
     #print(cppFile)
