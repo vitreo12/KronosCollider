@@ -71,6 +71,7 @@ static InterfaceTable *ft;
 
 #define BUFFER_ACQUIRE_BUF(name, input)                                        \
   float fbufnum_##name = IN0(input);                                           \
+  bool new_##name = false;                                                     \
   if (fbufnum_##name != unit->name.m_fbufnum) {                                \
     uint32 bufnum = (int)fbufnum_##name;                                       \
     World *world = unit->mWorld;                                               \
@@ -78,6 +79,7 @@ static InterfaceTable *ft;
       bufnum = 0;                                                              \
     unit->name.m_fbufnum = fbufnum_##name;                                     \
     unit->name.m_buf = world->mSndBufs + bufnum;                               \
+    new_##name = true;                                                         \
   }                                                                            \
   const SndBuf *buf_##name = unit->name.m_buf;                                 \
   ACQUIRE_SNDBUF_SHARED(buf_##name);                                           \
@@ -104,32 +106,26 @@ static InterfaceTable *ft;
     valid_##name = false;                                                      \
   }
 
-#define BUFFER_SET_PARAMS(name, slotIndex, slotIndexSize, slotIndexFrames,     \
-                          slotIndexNumChans, slotIndexSR)                      \
-  float bufSamples_##name = (float)buf_##name->samples;                        \
-  float bufFrames_##name = (float)buf_##name->frames;                          \
-  float numChans_##name = (float)buf_##name->channels;                         \
-  float bufSampleRate_##name = (float)buf_##name->samplerate;                  \
+#define BUFFER_SET_PARAMS(name, slotIndex, slotIndexParams)                    \
+  unit->name.m_params[0] = (float)buf_##name->samples;                         \
+  unit->name.m_params[1] = (float)buf_##name->frames;                          \
+  unit->name.m_params[2] = (float)buf_##name->channels;                        \
+  unit->name.m_params[3] = (float)buf_##name->samplerate;                      \
   *KronosGetValue(unit->m_obj, slotIndex) = (void *)bufData_##name;            \
-  *KronosGetValue(unit->m_obj, slotIndexSize) = (void *)&bufSamples_##name;    \
-  *KronosGetValue(unit->m_obj, slotIndexFrames) = (void *)&bufFrames_##name;   \
-  *KronosGetValue(unit->m_obj, slotIndexNumChans) = (void *)&numChans_##name;  \
-  *KronosGetValue(unit->m_obj, slotIndexSR) = (void *)&bufSampleRate_##name;
+  *KronosGetValue(unit->m_obj, slotIndexParams) = (void *)&unit->name.m_params;
 
-#define BUFFER_NEXT(name, input, slotIndex, slotIndexSize, slotIndexFrames,    \
-                    slotIndexNumChans, slotIndexSR)                            \
+#define BUFFER_NEXT(name, input, slotIndex, slotIndexParams)                   \
   BUFFER_ACQUIRE_BUF(name, input)                                              \
   BUFFER_CHECK_DATA_NEXT(name);                                                \
-  BUFFER_SET_PARAMS(name, slotIndex, slotIndexSize, slotIndexFrames,           \
-                    slotIndexNumChans, slotIndexSR)
+  if (new_##name) {                                                            \
+    BUFFER_SET_PARAMS(name, slotIndex, slotIndexParams)                        \
+  }
 
-#define BUFFER_INIT(name, input, slotIndex, slotIndexSize, slotIndexFrames,    \
-                    slotIndexNumChans, slotIndexSR)                            \
+#define BUFFER_INIT(name, input, slotIndex, slotIndexParams)                   \
   BUFFER_ACQUIRE_BUF(name, input)                                              \
   BUFFER_CHECK_DATA_INIT(name);                                                \
   if (valid_##name) {                                                          \
-    BUFFER_SET_PARAMS(name, slotIndex, slotIndexSize, slotIndexFrames,         \
-                      slotIndexNumChans, slotIndexSR)                          \
+    BUFFER_SET_PARAMS(name, slotIndex, slotIndexParams)                        \
   }
 
 #define BUFFER_RELEASE_NEXT(name) RELEASE_SNDBUF_SHARED(unit->name.m_buf);
@@ -148,6 +144,7 @@ struct Buffer {
   float m_fbufnum;
   float m_failedBufNum;
   SndBuf *m_buf;
+  float m_params[4] = {0, 0, 0, 44100};
 };
 
 struct KronosTemplate : Unit {
