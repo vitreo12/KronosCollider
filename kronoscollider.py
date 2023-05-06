@@ -51,7 +51,7 @@ def parseHeader(headerFile: str):
         if bufInputTypeToken in item and insToken not in item:
             bufName = item.replace("typedef float Kronos", "")
             inputTypeIdx = bufName.rfind(bufInputTypeToken)
-            bufName = bufName[:inputTypeIdx].lower()
+            bufName = bufName[:inputTypeIdx].lower().replace("_buffer", "")
             bufsDict[bufName] = {}
             slotIndex = kronosHeaderFileSplit[i + 2] #*KronosGetValue part of the function
             slotIndex = slotIndex.replace("*KronosGetValue(instance, ", "")
@@ -104,7 +104,7 @@ def writeFiles(name, configAudio, ins, outs, params, buffers):
         scFile = text.read()
 
     # Use capitalize name as SC classes can't be lower case
-    nameCap = name.capitalize()
+    nameCap = name[:1].upper() + name[1:]
 
     cppFile = cppFile.replace("#include \"KronosTemplate.h\"", "#include \"" + name + ".h\"")
     cppFile = cppFile.replace("KronosTemplate", nameCap)
