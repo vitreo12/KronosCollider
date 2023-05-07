@@ -147,6 +147,9 @@ def writeFiles(name, configAudio, ins, outs, params, buffers):
         paramIdx += 1
 
     # Buffers
+    if len(buffers) > 0:
+        cppFile = cppFile.replace("// decl init", "\n    DECL_INIT(false)")
+        cppFile = cppFile.replace("// init", "\n    INIT()")
     bufferIdx = paramIdx # start counting after params
     for bufName, param in buffers.items():
         scArgs = scArgs + bufName + "=(0),"
