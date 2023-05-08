@@ -19,6 +19,7 @@ def parseHeader(headerFile: str):
     configAudio = False
     bufsDict = {}
     paramsDict = {}
+    tickBufferParams = False
 
     # First pass: ins / outs and buffers (they don't interact with each other)
     insToken = "typedef float KronosaudioInputType["
@@ -35,6 +36,10 @@ def parseHeader(headerFile: str):
         # Configure audio exists
         if "KronosConfigure_RateAudio" in item:
             configAudio = True
+
+        # TickBufferParamsBlock exists
+        if "KronosTickBufferParamsBlock" in item:
+            tickBufferParams = True
 
         # ins
         if insToken in item:
@@ -84,9 +89,9 @@ def parseHeader(headerFile: str):
             else:
                 bufsDict[bufName]["slotIndex_params"] = slotIndex
 
-    return (tickAudio, configAudio, ins, outs, paramsDict, bufsDict)
+    return (tickAudio, configAudio, ins, outs, paramsDict, bufsDict, tickBufferParams)
 
-def writeFiles(name, configAudio, ins, outs, params, buffers):
+def writeFiles(name, configAudio, ins, outs, params, buffers, tickBufferParams):
     with open("KronosTemplate.cpp", "r") as text:
         cppFile = text.read()
     with open("KronosTemplate.sc", "r") as text:
@@ -108,7 +113,9 @@ def writeFiles(name, configAudio, ins, outs, params, buffers):
     numParams = len(params) + len(buffers)
     cppFile = cppFile.replace("// num params", "#define NUM_PARAMS " + str(numParams))
     if numParams > 0:
-        cppFile = cppFile.replace("// tick block", "TICK_BLOCK")
+        cppFile = cppFile.replace("// tick param block", "TICK_PARAM_BLOCK")
+    if tickBufferParams:
+        cppFile = cppFile.replace("// tick bufferparams block", "TICK_BUFFER_PARAMS_BLOCK")
 
     # ins / outs
     if ins > 1:
@@ -149,7 +156,7 @@ def writeFiles(name, configAudio, ins, outs, params, buffers):
     # Buffers
     if len(buffers) > 0:
         cppFile = cppFile.replace("// decl init", "\n    DECL_INIT(false)")
-        cppFile = cppFile.replace("// init", "\n    INIT()")
+        cppFile = cppFile.replace("// init", "\n    INIT")
     bufferIdx = paramIdx # start counting after params
     for bufName, param in buffers.items():
         scArgs = scArgs + bufName + "=(0),"
@@ -264,7 +271,7 @@ def main(kronosFile, scPath, extPath, removeCache, importKronosExternal) -> int:
     if os.system(kc) != 0:
         return 1
 
-    (tickAudio, configAudio, ins, outs, params, buffers) = parseHeader(headerFile)
+    (tickAudio, configAudio, ins, outs, params, buffers, tickBufferParams) = parseHeader(headerFile)
 
     # If tickAudio doesn't exist, quit: it's not an audio obj
     if not tickAudio:
@@ -276,7 +283,7 @@ def main(kronosFile, scPath, extPath, removeCache, importKronosExternal) -> int:
     # print("params:", params)
     # print("buffers:", buffers)
     
-    writeFiles(name, configAudio, ins, outs, params, buffers)
+    writeFiles(name, configAudio, ins, outs, params, buffers, tickBufferParams)
     buildFiles(name, scPath, extPath)
 
     # Remove the build folder (if)

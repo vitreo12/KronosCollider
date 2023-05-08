@@ -76,7 +76,7 @@ static InterfaceTable *ft;
 
 #define DECL_INIT(boolean) bool init = boolean;
 
-#define INIT()                                                                 \
+#define INIT                                                                   \
   if (init)                                                                    \
     KronosInitialize(unit->m_obj, nullptr);
 
@@ -157,7 +157,10 @@ static InterfaceTable *ft;
 
 #define PARAM_SET(slotIndex, input)
 
-#define TICK_BLOCK KronosTickBlock(unit->m_obj, nullptr, 1);
+#define TICK_PARAM_BLOCK KronosTickParamBlock(unit->m_obj, nullptr, 1);
+
+#define TICK_BUFFER_PARAMS_BLOCK                                               \
+  KronosTickBufferParamsBlock(unit->m_obj, nullptr, 1);
 
 struct Buffer {
   float m_fbufnum;
@@ -186,7 +189,7 @@ inline void KronosInit(KronosTemplate *unit) {
   // params next
   DECL_INIT(true)
   // buffers init
-  INIT()
+  INIT
   // buffers release init
 }
 
@@ -219,8 +222,9 @@ void KronosTemplate_next_a(KronosTemplate *unit, int inNumSamples) {
   // params next
   // decl init
   // buffers next
+  // tick bufferparams block
   // init
-  // tick block
+  // tick param block
   // outs next
   // buffers release next
 }
