@@ -129,7 +129,8 @@ static InterfaceTable *ft;
   *KronosGetValue(unit->m_obj, slotIndexParams) =                              \
       (void *)&unit->name.m_params;                                            \
   unit->name.m_print_next_err = true;                                          \
-  init = true;
+  init = true;                                                                 \
+  // tick bufferparams block
 
 #define BUFFER_NEXT(name, input, slotIndex, slotIndexParams)                   \
   BUFFER_ACQUIRE_BUF(name, input)                                              \
@@ -222,7 +223,6 @@ void KronosTemplate_next_a(KronosTemplate *unit, int inNumSamples) {
   // params next
   // decl init
   // buffers next
-  // tick bufferparams block
   // init
   // tick param block
   // outs next
