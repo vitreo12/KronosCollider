@@ -158,9 +158,9 @@ static InterfaceTable *ft;
 
 #define PARAM_SET(slotIndex, input)
 
-#define TICK_PARAM_ KronosTickParamBlock(unit->m_obj, nullptr, 1);
+#define TICK_PARAMS KronosTickParams(unit->m_obj, nullptr, 1);
 
-#define TICK_BUFFER_PARAMS KronosTickBufferParamsBlock(unit->m_obj, nullptr, 1);
+#define TICK_BUFFER_PARAMS KronosTickBufferParams(unit->m_obj, nullptr, 1);
 
 struct Buffer {
   float m_fbufnum;

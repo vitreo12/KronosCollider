@@ -38,7 +38,7 @@ def parseHeader(headerFile: str):
             configAudio = True
 
         # TickBufferParamsBlock exists
-        if "KronosTickBufferParamsBlock" in item:
+        if "KronosTickBufferParams" in item:
             tickBufferParams = True
 
         # ins
