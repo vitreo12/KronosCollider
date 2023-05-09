@@ -130,7 +130,7 @@ static InterfaceTable *ft;
       (void *)&unit->name.m_params;                                            \
   unit->name.m_print_next_err = true;                                          \
   init = true;                                                                 \
-  // tick bufferparams block
+  // tick bufferparams
 
 #define BUFFER_NEXT(name, input, slotIndex, slotIndexParams)                   \
   BUFFER_ACQUIRE_BUF(name, input)                                              \
@@ -158,10 +158,9 @@ static InterfaceTable *ft;
 
 #define PARAM_SET(slotIndex, input)
 
-#define TICK_PARAM_BLOCK KronosTickParamBlock(unit->m_obj, nullptr, 1);
+#define TICK_PARAM_ KronosTickParamBlock(unit->m_obj, nullptr, 1);
 
-#define TICK_BUFFER_PARAMS_BLOCK                                               \
-  KronosTickBufferParamsBlock(unit->m_obj, nullptr, 1);
+#define TICK_BUFFER_PARAMS KronosTickBufferParamsBlock(unit->m_obj, nullptr, 1);
 
 struct Buffer {
   float m_fbufnum;
@@ -224,7 +223,7 @@ void KronosTemplate_next_a(KronosTemplate *unit, int inNumSamples) {
   // decl init
   // buffers next
   // init
-  // tick param block
+  // tick params
   // outs next
   // buffers release next
 }

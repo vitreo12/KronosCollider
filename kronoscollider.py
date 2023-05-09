@@ -113,9 +113,9 @@ def writeFiles(name, configAudio, ins, outs, params, buffers, tickBufferParams):
     numParams = len(params) + len(buffers)
     cppFile = cppFile.replace("// num params", "#define NUM_PARAMS " + str(numParams))
     if numParams > 0:
-        cppFile = cppFile.replace("// tick param block", "TICK_PARAM_BLOCK")
+        cppFile = cppFile.replace("// tick params", "TICK_PARAMS")
     if tickBufferParams:
-        cppFile = cppFile.replace("// tick bufferparams block", "TICK_BUFFER_PARAMS_BLOCK")
+        cppFile = cppFile.replace("// tick bufferparams", "TICK_BUFFER_PARAMS")
 
     # ins / outs
     if ins > 1:
