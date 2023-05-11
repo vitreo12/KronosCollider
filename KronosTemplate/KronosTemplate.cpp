@@ -105,14 +105,14 @@ static InterfaceTable *ft;
     }                                                                          \
   }
 
-#define BUFFER_CHECK_DATA_NEXT(name, slotIndex, slotIndexParams)               \
+#define BUFFER_CHECK_DATA_NEXT(name)                                           \
   if (!bufData_##name) {                                                       \
     BUFFER_PRINT_ERROR(name)                                                   \
     ClearUnitOutputs(unit, inNumSamples);                                      \
     return;                                                                    \
   }
 
-#define BUFFER_CHECK_DATA_INIT(name, slotIndex, slotIndexParams)               \
+#define BUFFER_CHECK_DATA_INIT(name)                                           \
   bool valid_##name = true;                                                    \
   if (!bufData_##name) {                                                       \
     BUFFER_PRINT_ERROR(name)                                                   \
@@ -134,7 +134,7 @@ static InterfaceTable *ft;
 
 #define BUFFER_NEXT(name, input, slotIndex, slotIndexParams)                   \
   BUFFER_ACQUIRE_BUF(name, input)                                              \
-  BUFFER_CHECK_DATA_NEXT(name, slotIndex, slotIndexParams);                    \
+  BUFFER_CHECK_DATA_NEXT(name);                                                \
   if (new_##name) {                                                            \
     BUFFER_SET_PARAMS(name, slotIndex, slotIndexParams)                        \
   }
@@ -142,7 +142,7 @@ static InterfaceTable *ft;
 // Provide an init address so that KronosInitialize won't fail
 #define BUFFER_INIT(name, input, slotIndex, slotIndexParams)                   \
   BUFFER_ACQUIRE_BUF(name, input)                                              \
-  BUFFER_CHECK_DATA_INIT(name, slotIndex, slotIndexParams);                    \
+  BUFFER_CHECK_DATA_INIT(name);                                                \
   if (valid_##name) {                                                          \
     BUFFER_SET_PARAMS(name, slotIndex, slotIndexParams)                        \
   } else {                                                                     \
