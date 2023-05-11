@@ -77,8 +77,10 @@ static InterfaceTable *ft;
 #define DECL_INIT(boolean) bool init = boolean;
 
 #define INIT                                                                   \
-  if (init)                                                                    \
-    KronosInitialize(unit->m_obj, nullptr);
+  if (init) {                                                                  \
+  // tick bufferparams \\
+    KronosInitialize(unit->m_obj, nullptr);                                    \
+  }
 
 #define BUFFER_ACQUIRE_BUF(name, input)                                        \
   float fbufnum_##name = IN0(input);                                           \
@@ -129,8 +131,7 @@ static InterfaceTable *ft;
   *KronosGetValue(unit->m_obj, slotIndexParams) =                              \
       (void *)&unit->name.m_params;                                            \
   unit->name.m_print_next_err = true;                                          \
-  init = true;                                                                 \
-  // tick bufferparams
+  init = true;
 
 #define BUFFER_NEXT(name, input, slotIndex, slotIndexParams)                   \
   BUFFER_ACQUIRE_BUF(name, input)                                              \
